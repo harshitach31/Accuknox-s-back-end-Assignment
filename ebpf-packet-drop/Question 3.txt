@@ -1,0 +1,36 @@
+1. What the code is attempting to do
+
+The code is creating a worker pool using goroutines and channels.
+It sends functions (func()) into a buffered channel, and multiple goroutines (workers) continuously read from this channel and execute those functions concurrently.
+
+2. How the highlighted constructs work
+
+chan func() → a channel that carries functions (with no arguments and no return values).
+
+go func() { ... }() → starts a new goroutine (lightweight concurrent thread).
+
+for f := range cnp { f() } → repeatedly receives functions from the channel and executes them.
+
+3. Significance of the for loop with 4 iterations
+
+The loop starts 4 separate worker goroutines.
+Each one runs independently, waiting to read from the channel.
+This allows up to 4 tasks (functions) to be executed in parallel — i.e., a pool of 4 workers.
+
+4. Significance of make(chan func(), 10)
+
+This creates a buffered channel that can store up to 10 function tasks.
+It means you can send 10 functions into the queue (cnp <- func() { ... }) without blocking, even if the workers haven’t picked them up yet.
+
+5. Why “HERE1” is not getting printed
+
+Because the main goroutine exits immediately after printing "Hello".
+The worker goroutines don’t get a chance to execute the function from the channel before the program terminates.
+When main() ends, all goroutines are stopped.
+
+ To fix this, add a short delay or synchronization:
+
+time.Sleep(time.Second)
+
+
+or use sync.WaitGroup to wait for workers to finish.

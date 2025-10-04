@@ -1,0 +1,27 @@
+
+---
+
+## **2. Makefile**
+
+```makefile
+BPF_CLANG=clang
+BPF_LLVM=llc
+CFLAGS=-O2 -target bpf
+USER_CFLAGS=-O2 -Wall
+
+all: bpf/drop_port_kern.o bpf/drop_process_kern.o drop_port_user drop_process_user
+
+bpf/drop_port_kern.o: bpf/drop_port.c
+	$(BPF_CLANG) $(CFLAGS) -c $< -o $@
+
+bpf/drop_process_kern.o: bpf/drop_process.c
+	$(BPF_CLANG) $(CFLAGS) -c $< -o $@
+
+drop_port_user: user/drop_port_user.c
+	$(CC) $(USER_CFLAGS) $< -o $@ -lbpf
+
+drop_process_user: user/drop_process_user.c
+	$(CC) $(USER_CFLAGS) $< -o $@ -lbpf
+
+clean:
+	rm -f bpf/*.o drop_port_user drop_process_user

@@ -1,0 +1,49 @@
+#include <stdio.h>
+#include <bpf/libbpf.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <dirent.h>
+
+#define PORT 4040
+#define PROCESS "myprocess"
+
+int main(int argc, char **argv) {
+    struct bpf_object *obj;
+    int map_fd;
+
+    obj = bpf_object__open_file("bpf/drop_process_kern.o", NULL);
+    if (libbpf_get_error(obj)) return 1;
+
+    if (bpf_object__load(obj)) return 1;
+
+    map_fd = bpf_object__find_map_fd_by_name(obj, "allowed_process");
+    if (map_fd < 0) return 1;
+
+    // Find PID of process
+    DIR *dir = opendir("/proc");
+    struct dirent *entry;
+    while ((entry = readdir(dir))) {
+        pid_t pid = atoi(entry->d_name);
+        if (pid <= 0) continue;
+
+        char path[256], comm[256];
+        snprintf(path, sizeof(path), "/proc/%d/comm", pid);
+        FILE *f = fopen(path, "r");
+        if (!f) continue;
+        if (fgets(comm, sizeof(comm), f) != NULL) {
+            comm[strcspn(comm, "\n")] = 0;
+            if (strcmp(comm, PROCESS) == 0) {
+                __u16 port = PORT;
+                bpf_map_update_elem(map_fd, &pid, &port, BPF_ANY);
+            }
+        }
+        fclose(f);
+    }
+    closedir(dir);
+
+    printf("Program loaded. Allowing TCP port %d for process %s\n", PORT, PROCESS);
+    pause();
+    return 0;
+}

@@ -1,0 +1,27 @@
+#include <stdio.h>
+#include <bpf/libbpf.h>
+#include <unistd.h>
+
+#define PORT 4040
+
+int main(int argc, char **argv) {
+    struct bpf_object *obj;
+    int map_fd;
+    __u32 key = 0;
+    __u16 value = PORT;
+
+    obj = bpf_object__open_file("bpf/drop_port_kern.o", NULL);
+    if (libbpf_get_error(obj)) return 1;
+
+    if (bpf_object__load(obj)) return 1;
+
+    map_fd = bpf_object__find_map_fd_by_name(obj, "port_map");
+    if (map_fd < 0) return 1;
+
+    bpf_map_update_elem(map_fd, &key, &value, BPF_ANY);
+
+    printf("Program loaded. Dropping TCP packets to port %d\n", PORT);
+    pause();
+    return 0;
+}
+

@@ -1,0 +1,8 @@
+#!/bin/bash
+if [ "$1" == "drop_port" ]; then
+    sudo ./drop_port_user
+elif [ "$1" == "drop_process" ]; then
+    sudo ./drop_process_user
+else
+    echo "Usage: $0 {drop_port|drop_process}"
+fi
